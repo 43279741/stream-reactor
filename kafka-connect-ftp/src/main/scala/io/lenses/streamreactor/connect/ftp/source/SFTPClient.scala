@@ -209,6 +209,49 @@ class SFTPClient extends FTPClient with StrictLogging {
       case unknown: Any                 => throw new ClassCastException(s"SFTPClient Error obtaining LsEntry. Unknown type $unknown")
     }
 
+    /**
+      * Rename or move a file on the SFTP server.
+      * @param oldPath The current path of the file.
+      * @param newPath The new path of the file.
+      * @return true if the operation was successful, false otherwise.
+      */
+    def renameFile(oldPath: String, newPath: String): Boolean= {
+      maybeChannelSftp.fold {
+        logger.error(s"SFTPClient error, channel not initiated in path $oldPath.")
+        false
+      } { channel =>
+        if (!channel.isConnected) connectChannel(channel)
+        Try{
+            channel.rename(oldPath, newPath)
+            true
+            }.getOrElse {
+              logger.error(s"SFTPClient Error, could not rename/move file from $ oldPath to $newPath")
+              false
+            }
+        }
+      }
+
+    /**
+      * Delete a file on the SFTP server.
+      * @param filePath The path of the file to be deleted.
+      * @return true if the operation was successful, false otherwise.
+      */
+    def deleteFile(filePath: String): Boolean= {
+      maybeChannelSftp.fold {
+        logger.error(s"SFTPClient error, channel not initiated in path $filePath.")
+        false
+      } { channel =>
+        if (!channel.isConnected) connectChannel(channel)
+        Try{
+            channel.rm(filePath)
+            true
+            }.getOrElse {
+              logger.error(s"SFTPClient Error, could not delete file at path $ filePath.")
+              false
+            }
+        }
+      }
+
   private def createFtpFile(lsEntry: ChannelSftp.LsEntry) = {
     val ftpFile: FTPFile = new FTPFile()
     ftpFile.setType(0)
